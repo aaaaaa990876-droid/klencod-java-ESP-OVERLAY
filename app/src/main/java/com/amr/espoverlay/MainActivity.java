@@ -351,4 +351,14 @@ public class MainActivity extends Activity {
             showMessage("تم إظهار الزر العائم");
         } catch (Exception e) {
             floatingView = null;
-            floating
+            showMessage("تعذر إظهار الزر العائم");
+}
+}
+
+@Override
+protected void onDestroy() {
+    removeFloating();
+    super.onDestroy();
+}
+
+}
