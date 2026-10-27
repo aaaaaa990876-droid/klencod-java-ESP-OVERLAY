@@ -300,10 +300,17 @@ public class MainActivity extends Activity {
         params.gravity = Gravity.CENTER;
 
         try {
-            windowManager.addView(panel, params);
-            floatingMenu = panel;
-        } catch (Exception e) {
-            showMessage("تعذر فتح القائمة؛ تحقق من صلاحية العرض");
+            
+try {
+    windowManager.addView(panel, params);
+    floatingMenu = panel;
+    showMessage("تم فتح القائمة");
+} catch (Exception e) {
+    floatingMenu = null;
+    showMessage("خطأ القائمة: " + e.getClass().getSimpleName());
+    android.util.Log.e("ESP_MENU", "Failed to show menu", e);
+}
+
         }
     }
 
