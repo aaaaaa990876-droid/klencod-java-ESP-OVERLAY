@@ -25,32 +25,46 @@ import android.widget.Toast;
 public class MainActivity extends Activity {
 
     private final int BG = Color.rgb(7, 10, 18);
-    private final int PANEL = Color.rgb(17, 27, 43);
+    private final int PANEL = Color.rgb(18, 27, 43);
     private final int BLUE = Color.rgb(0, 170, 255);
     private final int WHITE = Color.WHITE;
     private final int GRAY = Color.rgb(165, 185, 205);
     private final int GREEN = Color.rgb(0, 235, 150);
 
     private WindowManager wm;
-    private View bubbleView;
-    private View menuView;
+    private View bubble;
     private WindowManager.LayoutParams bubbleParams;
-    private TextView mainStatus;
+    private TextView status;
     private boolean running = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-        buildMainScreen();
+
+        if (getIntent().getBooleanExtra("OPEN_MENU", false)) {
+            showMenuScreen();
+        } else {
+            showHomeScreen();
+        }
     }
 
-    private int dp(float value) {
-        return (int) (value *
-                getResources().getDisplayMetrics().density + 0.5f);
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+
+        if (intent.getBooleanExtra("OPEN_MENU", false)) {
+            showMenuScreen();
+        }
     }
 
-    private GradientDrawable makeBackground(int color, int border) {
+    private int dp(float v) {
+        return (int) (v * getResources()
+                .getDisplayMetrics().density + 0.5f);
+    }
+
+    private GradientDrawable bg(int color, int border) {
         GradientDrawable d = new GradientDrawable();
         d.setColor(color);
         d.setCornerRadius(dp(18));
@@ -58,24 +72,24 @@ public class MainActivity extends Activity {
         return d;
     }
 
-    private TextView makeLabel(String text, int size, int color) {
+    private TextView label(String text, int size, int color) {
         TextView t = new TextView(this);
         t.setText(text);
         t.setTextSize(size);
         t.setTextColor(color);
         t.setGravity(Gravity.CENTER);
         t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        t.setPadding(dp(10), dp(10), dp(10), dp(10));
+        t.setPadding(dp(10), dp(12), dp(10), dp(12));
         return t;
     }
 
-    private Button makeButton(String text) {
+    private Button button(String text) {
         Button b = new Button(this);
         b.setText(text);
-        b.setTextSize(15);
         b.setTextColor(WHITE);
+        b.setTextSize(15);
         b.setAllCaps(false);
-        b.setBackground(makeBackground(PANEL, BLUE));
+        b.setBackground(bg(PANEL, BLUE));
         return b;
     }
 
@@ -83,64 +97,119 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        p.setMargins(0, dp(5), 0, dp(5));
+        p.setMargins(0, dp(6), 0, dp(6));
         return p;
     }
 
-    private void buildMainScreen() {
+    private LinearLayout makeLayout() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(18), dp(20), dp(18), dp(20));
+        layout.setBackgroundColor(BG);
+        return layout;
+    }
+
+    private void showHomeScreen() {
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(BG);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(18), dp(22), dp(18), dp(22));
+        LinearLayout root = makeLayout();
         scroll.addView(root);
 
-        root.addView(makeLabel("ESP OVERLAY PRO", 27, BLUE));
-        root.addView(makeLabel("NEON BLUE CONTROL PANEL", 13, GRAY));
+        root.addView(label("ESP OVERLAY PRO", 27, BLUE));
+        root.addView(label("NEON BLUE CONTROL PANEL", 13, GRAY));
 
-        mainStatus = makeLabel("● الحالة: متوقفة", 18, GRAY);
-        root.addView(mainStatus);
+        status = label(currentStatus(), 18, running ? GREEN : GRAY);
+        root.addView(status);
 
-        Button start = makeButton("▶ تشغيل الواجهة التجريبية");
+        Button open = button("☰ فتح القائمة");
+        root.addView(open, itemParams());
+        open.setOnClickListener(v -> showMenuScreen());
+
+        Button start = button("▶ تشغيل الواجهة التجريبية");
         root.addView(start, itemParams());
         start.setOnClickListener(v -> {
             running = true;
             updateStatus();
-            showToast("تم تشغيل الواجهة");
+            Toast.makeText(this, "تم التشغيل", Toast.LENGTH_SHORT).show();
         });
 
-        Button stop = makeButton("■ إيقاف الواجهة");
+        Button stop = button("■ إيقاف الواجهة");
         root.addView(stop, itemParams());
         stop.setOnClickListener(v -> {
             running = false;
             updateStatus();
-            showToast("تم إيقاف الواجهة");
+            Toast.makeText(this, "تم الإيقاف", Toast.LENGTH_SHORT).show();
         });
 
-        Button show = makeButton("◉ إظهار زر ESP العائم");
-        root.addView(show, itemParams());
-        show.setOnClickListener(v -> showBubble());
+        Button floating = button("◉ إظهار زر ESP العائم");
+        root.addView(floating, itemParams());
+        floating.setOnClickListener(v -> showBubble());
 
-        Button hide = makeButton("✕ إخفاء الزر والقائمة");
+        Button hide = button("✕ إخفاء زر ESP");
         root.addView(hide, itemParams());
-        hide.setOnClickListener(v -> {
-            removeMenu();
-            removeBubble();
-        });
+        hide.setOnClickListener(v -> removeBubble());
 
-        root.addView(makeLabel(
-                "واجهة تجريبية فقط.", 13, GRAY));
-
+        root.addView(label("واجهة تجريبية فقط.", 13, GRAY));
         setContentView(scroll);
     }
 
+    private String currentStatus() {
+        return running ? "● الحالة: تعمل" : "● الحالة: متوقفة";
+    }
+
     private void updateStatus() {
-        if (mainStatus != null) {
-            mainStatus.setText(
-                    running ? "● الحالة: تعمل" : "● الحالة: متوقفة");
-            mainStatus.setTextColor(running ? GREEN : GRAY);
+        if (status != null) {
+            status.setText(currentStatus());
+            status.setTextColor(running ? GREEN : GRAY);
         }
+    }
+
+    private void showMenuScreen() {
+        ScrollView scroll = new ScrollView(this);
+        scroll.setBackgroundColor(BG);
+
+        LinearLayout root = makeLayout();
+        root.setBackground(bg(BG, BLUE));
+        scroll.addView(root);
+
+        root.addView(label("ESP OVERLAY PRO", 27, BLUE));
+        root.addView(label("NEON CONTROL MENU", 14, GRAY));
+
+        TextView state = label(
+                running ? "● RUNNING" : "● STOPPED",
+                19, running ? GREEN : GRAY);
+        root.addView(state, itemParams());
+
+        Button toggle = button(
+                running ? "■ إيقاف الواجهة" : "▶ تشغيل الواجهة");
+        root.addView(toggle, itemParams());
+
+        toggle.setOnClickListener(v -> {
+            running = !running;
+            state.setText(running ? "● RUNNING" : "● STOPPED");
+            state.setTextColor(running ? GREEN : GRAY);
+            toggle.setText(running
+                    ? "■ إيقاف الواجهة"
+                    : "▶ تشغيل الواجهة");
+        });
+
+        Button home = button("⌂ الرجوع للرئيسية");
+        root.addView(home, itemParams());
+        home.setOnClickListener(v -> showHomeScreen());
+
+        Button hide = button("✕ إخفاء زر ESP العائم");
+        root.addView(hide, itemParams());
+        hide.setOnClickListener(v -> {
+            removeBubble();
+            showMenuScreen();
+        });
+
+        root.addView(label(
+                "هذه واجهة تحكم تجريبية فقط.",
+                13, GRAY));
+
+        setContentView(scroll);
     }
 
     private int overlayType() {
@@ -150,44 +219,42 @@ public class MainActivity extends Activity {
         return WindowManager.LayoutParams.TYPE_PHONE;
     }
 
-    private boolean hasOverlayPermission() {
-        return Build.VERSION.SDK_INT < 23
-                || Settings.canDrawOverlays(this);
-    }
-
     private void showBubble() {
-        if (!hasOverlayPermission()) {
+        if (Build.VERSION.SDK_INT >= 23
+                && !Settings.canDrawOverlays(this)) {
             Intent i = new Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:" + getPackageName()));
             startActivity(i);
-            showToast("فعّل صلاحية الظهور فوق التطبيقات ثم ارجع");
+            Toast.makeText(this,
+                    "فعّل صلاحية الظهور فوق التطبيقات",
+                    Toast.LENGTH_LONG).show();
             return;
         }
 
-        if (bubbleView != null) {
-            showToast("زر ESP ظاهر بالفعل");
+        if (bubble != null) {
+            Toast.makeText(this, "زر ESP ظاهر بالفعل",
+                    Toast.LENGTH_SHORT).show();
             return;
         }
 
-        TextView bubble = makeLabel("ESP", 17, WHITE);
-        bubble.setBackground(makeBackground(PANEL, BLUE));
-        bubble.setElevation(dp(10));
+        TextView b = label("ESP", 17, WHITE);
+        b.setBackground(bg(PANEL, BLUE));
+        b.setElevation(dp(10));
 
         bubbleParams = new WindowManager.LayoutParams(
                 dp(76), dp(58), overlayType(),
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
 
         bubbleParams.gravity = Gravity.TOP | Gravity.START;
         bubbleParams.x = dp(20);
         bubbleParams.y = dp(220);
 
-        bubble.setOnTouchListener(new View.OnTouchListener() {
-            private float downX, downY;
-            private int startX, startY;
-            private boolean moved;
+        b.setOnTouchListener(new View.OnTouchListener() {
+            float downX, downY;
+            int startX, startY;
+            boolean moved;
 
             @Override
             public boolean onTouch(View v, MotionEvent e) {
@@ -209,18 +276,17 @@ public class MainActivity extends Activity {
                             moved = true;
                         }
 
-                        if (moved && bubbleView != null) {
+                        if (moved && bubble != null) {
                             bubbleParams.x = startX + (int) dx;
                             bubbleParams.y = startY + (int) dy;
                             try {
-                                wm.updateViewLayout(
-                                        bubbleView, bubbleParams);
+                                wm.updateViewLayout(bubble, bubbleParams);
                             } catch (Exception ignored) { }
                         }
                         return true;
 
                     case MotionEvent.ACTION_UP:
-                        if (!moved) showMenu();
+                        if (!moved) openMenuActivity();
                         return true;
                 }
                 return true;
@@ -228,119 +294,37 @@ public class MainActivity extends Activity {
         });
 
         try {
-            wm.addView(bubble, bubbleParams);
-            bubbleView = bubble;
-            showToast("اضغط ESP لفتح القائمة");
+            wm.addView(b, bubbleParams);
+            bubble = b;
+            Toast.makeText(this, "اضغط ESP لفتح القائمة",
+                    Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            bubbleView = null;
-            showToast("تعذر عرض الزر: " +
-                    e.getClass().getSimpleName());
+            bubble = null;
+            Toast.makeText(this, "تعذر عرض الزر",
+                    Toast.LENGTH_LONG).show();
         }
     }
 
-    private void showMenu() {
-        if (menuView != null) {
-            removeMenu();
-            return;
-        }
-
-        if (!hasOverlayPermission()) {
-            showToast("فعّل صلاحية الظهور فوق التطبيقات");
-            return;
-        }
-
-        LinearLayout panel = new LinearLayout(this);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(16), dp(16), dp(16), dp(16));
-        panel.setBackground(makeBackground(BG, BLUE));
-        panel.setElevation(dp(16));
-
-        panel.addView(
-                makeLabel("ESP OVERLAY PRO", 23, BLUE),
-                itemParams());
-
-        panel.addView(
-                makeLabel("NEON CONTROL PANEL", 13, GRAY),
-                itemParams());
-
-        TextView state = makeLabel(
-                running ? "● RUNNING" : "● STOPPED",
-                17, running ? GREEN : GRAY);
-        panel.addView(state, itemParams());
-
-        Button toggle = makeButton(
-                running ? "■ إيقاف الواجهة" : "▶ تشغيل الواجهة");
-        panel.addView(toggle, itemParams());
-
-        toggle.setOnClickListener(v -> {
-            running = !running;
-            updateStatus();
-            state.setText(running ? "● RUNNING" : "● STOPPED");
-            state.setTextColor(running ? GREEN : GRAY);
-            toggle.setText(running
-                    ? "■ إيقاف الواجهة"
-                    : "▶ تشغيل الواجهة");
-        });
-
-        Button close = makeButton("✕ إغلاق القائمة");
-        panel.addView(close, itemParams());
-        close.setOnClickListener(v -> removeMenu());
-
-        int screenWidth = getResources()
-                .getDisplayMetrics().widthPixels;
-        int menuWidth = Math.min(screenWidth - dp(32), dp(320));
-
-        WindowManager.LayoutParams p =
-                new WindowManager.LayoutParams(
-                        menuWidth,
-                        WindowManager.LayoutParams.WRAP_CONTENT,
-                        overlayType(),
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                        PixelFormat.TRANSLUCENT);
-
-        p.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        p.y = dp(100);
-
-        try {
-            // سجل النافذة قبل عرضها حتى يسهل إغلاقها لاحقاً.
-            menuView = panel;
-            wm.addView(panel, p);
-            panel.bringToFront();
-            panel.setVisibility(View.VISIBLE);
-        } catch (Exception e) {
-            menuView = null;
-            showToast("فشل فتح القائمة: " +
-                    e.getClass().getSimpleName());
-            android.util.Log.e("ESP_OVERLAY", "showMenu failed", e);
-        }
-    }
-
-    private void removeMenu() {
-        if (menuView != null) {
-            try {
-                wm.removeView(menuView);
-            } catch (Exception ignored) { }
-            menuView = null;
-        }
+    private void openMenuActivity() {
+        Intent i = new Intent(this, MainActivity.class);
+        i.putExtra("OPEN_MENU", true);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(i);
     }
 
     private void removeBubble() {
-        if (bubbleView != null) {
+        if (bubble != null) {
             try {
-                wm.removeView(bubbleView);
+                wm.removeView(bubble);
             } catch (Exception ignored) { }
-            bubbleView = null;
+            bubble = null;
         }
-    }
-
-    private void showToast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
     @Override
     protected void onDestroy() {
-        removeMenu();
         removeBubble();
         super.onDestroy();
     }
