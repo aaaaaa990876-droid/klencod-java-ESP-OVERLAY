@@ -1,17 +1,17 @@
+
 package com.amr.espoverlay;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.content.Intent;
-import android.net.Uri;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -24,9 +24,9 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
-    private final int BG = Color.rgb(12, 15, 22);
-    private final int PANEL = Color.rgb(22, 29, 42);
-    private final int BLUE = Color.rgb(0, 150, 255);
+    private final int BG = Color.rgb(8, 12, 20);
+    private final int PANEL = Color.rgb(18, 27, 42);
+    private final int BLUE = Color.rgb(0, 170, 255);
     private final int WHITE = Color.WHITE;
     private final int GRAY = Color.rgb(170, 185, 205);
     private final int GREEN = Color.rgb(0, 230, 150);
@@ -34,32 +34,31 @@ public class MainActivity extends Activity {
     private LinearLayout root;
     private TextView status;
     private boolean enabled = false;
-    private boolean floatingEnabled = false;
 
     private WindowManager windowManager;
     private View floatingView;
+    private View floatingMenu;
+    private WindowManager.LayoutParams bubbleParams;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        windowManager =
-                (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        windowManager = (WindowManager)
+                getSystemService(Context.WINDOW_SERVICE);
         buildInterface();
+    }
+
+    private int dp(float value) {
+        return (int) (value * getResources()
+                .getDisplayMetrics().density + 0.5f);
     }
 
     private GradientDrawable shape(int color, int stroke) {
         GradientDrawable d = new GradientDrawable();
         d.setColor(color);
         d.setCornerRadius(dp(18));
-        if (stroke != 0) {
-            d.setStroke(dp(2), stroke);
-        }
+        if (stroke != 0) d.setStroke(dp(2), stroke);
         return d;
-    }
-
-    private int dp(float value) {
-        return (int) (value * getResources()
-                .getDisplayMetrics().density + 0.5f);
     }
 
     private TextView label(String text, int size, int color) {
@@ -80,8 +79,13 @@ public class MainActivity extends Activity {
         b.setTextSize(15);
         b.setAllCaps(false);
         b.setBackground(shape(PANEL, BLUE));
-        b.setPadding(dp(8), dp(6), dp(8), dp(6));
         return b;
+    }
+
+    private LinearLayout.LayoutParams matchWrap() {
+        return new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
     }
 
     private void buildInterface() {
@@ -93,25 +97,14 @@ public class MainActivity extends Activity {
         root.setPadding(dp(18), dp(22), dp(18), dp(22));
         scroll.addView(root);
 
-        TextView title = label("ESP OVERLAY PRO", 27, BLUE);
-        root.addView(title, matchWrap());
-
-        TextView subtitle = label(
-                "واجهة تجريبية • أسود وأزرق نيوني", 14, GRAY);
-        root.addView(subtitle, matchWrap());
-
-        addSpace(12);
-
-        LinearLayout statusCard = new LinearLayout(this);
-        statusCard.setOrientation(LinearLayout.VERTICAL);
-        statusCard.setPadding(dp(12), dp(10), dp(12), dp(10));
-        statusCard.setBackground(shape(PANEL, BLUE));
+        root.addView(label("ESP OVERLAY PRO", 27, BLUE),
+                matchWrap());
+        root.addView(label(
+                "واجهة تجريبية • أسود وأزرق نيوني", 14, GRAY),
+                matchWrap());
 
         status = label("● الحالة: متوقفة", 18, GRAY);
-        statusCard.addView(status, matchWrap());
-        root.addView(statusCard, matchWrap());
-
-        addSpace(16);
+        root.addView(status, matchWrap());
 
         Button start = makeButton("▶ تشغيل الواجهة");
         root.addView(start, matchWrap());
@@ -121,8 +114,6 @@ public class MainActivity extends Activity {
             showMessage("تم تشغيل الواجهة التجريبية");
         });
 
-        addSpace(8);
-
         Button stop = makeButton("■ إيقاف الواجهة");
         root.addView(stop, matchWrap());
         stop.setOnClickListener(v -> {
@@ -131,183 +122,109 @@ public class MainActivity extends Activity {
             showMessage("تم إيقاف الواجهة");
         });
 
-        addSpace(8);
+        Button show = makeButton("◉ إظهار الزر العائم");
+        root.addView(show, matchWrap());
+        show.setOnClickListener(v -> showFloating());
 
-        Button settings = makeButton("⚙ الإعدادات");
-        root.addView(settings, matchWrap());
-        settings.setOnClickListener(v -> showSettings());
-
-        addSpace(8);
-
-        Button floating = makeButton("◉ إظهار الزر العائم");
-        root.addView(floating, matchWrap());
-        floating.setOnClickListener(v -> showFloating());
-
-        addSpace(8);
-
-        Button hide = makeButton("إخفاء الزر العائم");
+        Button hide = makeButton("إخفاء الزر والقائمة");
         root.addView(hide, matchWrap());
-        hide.setOnClickListener(v -> removeFloating());
+        hide.setOnClickListener(v -> {
+            removeFloatingMenu();
+            removeFloating();
+        });
 
-        addSpace(16);
-
-        TextView note = label(
-                "ملاحظة: التطبيق واجهة تجريبية فقط، " +
-                "ولا يكشف اللاعبين أو مواقعهم داخل PUBG.",
-                14, GRAY);
-        root.addView(note, matchWrap());
+        root.addView(label(
+                "واجهة تجريبية فقط، لا تكشف مواقع اللاعبين داخل PUBG.",
+                13, GRAY), matchWrap());
 
         setContentView(scroll);
     }
 
-    private LinearLayout.LayoutParams matchWrap() {
-        return new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-    }
-
-    private void addSpace(int height) {
-        View space = new View(this);
-        root.addView(space, new LinearLayout.LayoutParams(
-                1, dp(height)));
-    }
-
     private void updateStatus() {
         if (status != null) {
-            if (enabled) {
-                status.setText("● الحالة: تعمل");
-                status.setTextColor(GREEN);
-            } else {
-                status.setText("● الحالة: متوقفة");
-                status.setTextColor(GRAY);
-            }
+            status.setText(enabled
+                    ? "● الحالة: تعمل"
+                    : "● الحالة: متوقفة");
+            status.setTextColor(enabled ? GREEN : GRAY);
         }
     }
 
-    private void showSettings() {
-        String[] options = {
-                "معلومات التطبيق",
-                "حالة الواجهة",
-                "إغلاق"
-        };
-
-        new AlertDialog.Builder(this)
-                .setTitle("⚙ الإعدادات")
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) {
-                        new AlertDialog.Builder(this)
-                                .setTitle("ESP OVERLAY PRO")
-                                .setMessage(
-                                        "نسخة تجريبية للأندرويد.\n" +
-                                        "ألوان: أسود وأزرق نيوني.\n" +
-                                        "لا تتصل باللعبة ولا تكشف اللاعبين.")
-                                .setPositiveButton("حسناً", null)
-                                .show();
-                    } else if (which == 1) {
-                        showMessage(enabled
-                                ? "الواجهة تعمل"
-                                : "الواجهة متوقفة");
-                    }
-                })
-                .show();
+    private int overlayType() {
+        if (Build.VERSION.SDK_INT >= 26) {
+            return WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        }
+        return WindowManager.LayoutParams.TYPE_PHONE;
     }
 
     private void showFloating() {
-        if (floatingEnabled && floatingView != null) {
+        if (Build.VERSION.SDK_INT >= 23
+                && !Settings.canDrawOverlays(this)) {
+            Intent intent = new Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+            showMessage("فعّل صلاحية الظهور فوق التطبيقات");
+            return;
+        }
+
+        if (floatingView != null) {
             showMessage("الزر العائم ظاهر بالفعل");
             return;
         }
 
-        if (Build.VERSION.SDK_INT >= 23
-                && !Settings.canDrawOverlays(this)) {
-            new AlertDialog.Builder(this)
-                    .setTitle("السماح بالزر العائم")
-                    .setMessage(
-                            "فعّل السماح بالظهور فوق التطبيقات " +
-                            "حتى يظهر الزر العائم.")
-                    .setPositiveButton("فتح الإعدادات", (d, w) -> {
-                        Intent intent = new Intent(
-                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                Uri.parse("package:" + getPackageName()));
-                        startActivity(intent);
-                    })
-                    .setNegativeButton("إلغاء", null)
-                    .show();
-            return;
-        }
-
-        final TextView bubble = label("ESP", 16, WHITE);
+        TextView bubble = label("ESP", 16, WHITE);
         bubble.setBackground(shape(PANEL, BLUE));
         bubble.setElevation(dp(12));
 
-        int type;
-        if (Build.VERSION.SDK_INT >= 26) {
-            type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-        } else {
-            type = WindowManager.LayoutParams.TYPE_PHONE;
-        }
+        bubbleParams = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                overlayType(),
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
 
-        final WindowManager.LayoutParams params =
-                new WindowManager.LayoutParams(
-                        WindowManager.LayoutParams.WRAP_CONTENT,
-                        WindowManager.LayoutParams.WRAP_CONTENT,
-                        type,
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                        PixelFormat.TRANSLUCENT);
-
-        params.gravity = Gravity.TOP | Gravity.START;
-        params.x = dp(30);
-        params.y = dp(250);
+        bubbleParams.gravity = Gravity.TOP | Gravity.START;
+        bubbleParams.x = dp(24);
+        bubbleParams.y = dp(220);
 
         bubble.setOnTouchListener(new View.OnTouchListener() {
             private int startX, startY;
             private float touchX, touchY;
+            private boolean moved;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        startX = params.x;
-                        startY = params.y;
+                        startX = bubbleParams.x;
+                        startY = bubbleParams.y;
                         touchX = event.getRawX();
                         touchY = event.getRawY();
+                        moved = false;
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
-                        params.x = startX +
-                                (int) (event.getRawX() - touchX);
-                        params.y = startY +
-                                (int) (event.getRawY() - touchY);
-                        try {
-                            windowManager.updateViewLayout(bubble, params);
-                        } catch (Exception ignored) {
+                        float dx = event.getRawX() - touchX;
+                        float dy = event.getRawY() - touchY;
+
+                        if (Math.abs(dx) > dp(6)
+                                || Math.abs(dy) > dp(6)) {
+                            moved = true;
+                        }
+
+                        if (moved) {
+                            bubbleParams.x = startX + (int) dx;
+                            bubbleParams.y = startY + (int) dy;
+                            try {
+                                windowManager.updateViewLayout(
+                                        floatingView, bubbleParams);
+                            } catch (Exception ignored) {
+                            }
                         }
                         return true;
 
                     case MotionEvent.ACTION_UP:
-                        float dx = Math.abs(
-                                event.getRawX() - touchX);
-                        float dy = Math.abs(
-                                event.getRawY() - touchY);
-
-                        if (dx < dp(10) && dy < dp(10)) {
-                            new AlertDialog.Builder(MainActivity.this)
-                                    .setTitle("ESP OVERLAY PRO")
-                                    .setMessage(enabled
-                                            ? "حالة الواجهة: تعمل"
-                                            : "حالة الواجهة: متوقفة")
-                                    .setPositiveButton("تشغيل", (d, w) -> {
-                                        enabled = true;
-                                        updateStatus();
-                                    })
-                                    .setNegativeButton("إيقاف", (d, w) -> {
-                                        enabled = false;
-                                        updateStatus();
-                                    })
-                                    .setNeutralButton("إغلاق الزر",
-                                            (d, w) -> removeFloating())
-                                    .show();
-                        }
+                        if (!moved) showFloatingMenu();
                         return true;
                 }
                 return false;
@@ -315,14 +232,88 @@ public class MainActivity extends Activity {
         });
 
         try {
-            windowManager.addView(bubble, params);
+            windowManager.addView(bubble, bubbleParams);
             floatingView = bubble;
-            floatingEnabled = true;
-            showMessage("تم إظهار الزر العائم");
+            showMessage("اضغط ESP لفتح القائمة");
         } catch (Exception e) {
             floatingView = null;
-            floatingEnabled = false;
-            showMessage("تعذر إظهار الزر. تحقق من الإذن.");
+            showMessage("تعذر إظهار الزر العائم");
+        }
+    }
+
+    private void showFloatingMenu() {
+        if (floatingMenu != null) {
+            removeFloatingMenu();
+            return;
+        }
+
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(14), dp(12), dp(14), dp(12));
+        panel.setBackground(shape(BG, BLUE));
+        panel.setElevation(dp(16));
+
+        panel.addView(label("ESP OVERLAY PRO", 20, BLUE),
+                matchWrap());
+        panel.addView(label("واجهة تجريبية", 13, GRAY),
+                matchWrap());
+
+        TextView state = label(
+                enabled ? "● الحالة: تعمل" : "● الحالة: متوقفة",
+                15, enabled ? GREEN : GRAY);
+        panel.addView(state, matchWrap());
+
+        Button toggle = makeButton(
+                enabled ? "■ إيقاف الواجهة" : "▶ تشغيل الواجهة");
+        panel.addView(toggle, matchWrap());
+
+        toggle.setOnClickListener(v -> {
+            enabled = !enabled;
+            updateStatus();
+            state.setText(enabled
+                    ? "● الحالة: تعمل"
+                    : "● الحالة: متوقفة");
+            state.setTextColor(enabled ? GREEN : GRAY);
+            toggle.setText(enabled
+                    ? "■ إيقاف الواجهة"
+                    : "▶ تشغيل الواجهة");
+        });
+
+        Button close = makeButton("إغلاق القائمة");
+        panel.addView(close, matchWrap());
+        close.setOnClickListener(v -> removeFloatingMenu());
+
+        int width = Math.min(
+                getResources().getDisplayMetrics().widthPixels - dp(32),
+                dp(300));
+
+        WindowManager.LayoutParams params =
+                new WindowManager.LayoutParams(
+                        width,
+                        WindowManager.LayoutParams.WRAP_CONTENT,
+                        overlayType(),
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                                | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                        PixelFormat.TRANSLUCENT);
+
+        params.gravity = Gravity.CENTER;
+
+        try {
+            windowManager.addView(panel, params);
+            floatingMenu = panel;
+        } catch (Exception e) {
+            showMessage("تعذر فتح القائمة؛ تحقق من صلاحية العرض");
+        }
+    }
+
+    private void removeFloatingMenu() {
+        if (floatingMenu != null) {
+            try {
+                windowManager.removeView(floatingMenu);
+            } catch (Exception ignored) {
+            }
+            floatingMenu = null;
         }
     }
 
@@ -334,7 +325,6 @@ public class MainActivity extends Activity {
             }
             floatingView = null;
         }
-        floatingEnabled = false;
         showMessage("تم إخفاء الزر العائم");
     }
 
@@ -344,14 +334,8 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        if (floatingView != null) {
-            try {
-                windowManager.removeView(floatingView);
-            } catch (Exception ignored) {
-            }
-            floatingView = null;
-        }
-        floatingEnabled = false;
+        removeFloatingMenu();
+        removeFloating();
         super.onDestroy();
     }
 }
