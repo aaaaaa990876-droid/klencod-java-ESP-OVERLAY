@@ -4,8 +4,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.graphics.PixelFormat;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,256 +24,221 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
-    private final int BG = Color.rgb(7, 9, 16);
-    private final int PANEL = Color.rgb(17, 23, 38);
-    private final int BLUE = Color.rgb(0, 210, 255);
+    private final int BG = Color.rgb(12, 15, 22);
+    private final int PANEL = Color.rgb(22, 29, 42);
+    private final int BLUE = Color.rgb(0, 150, 255);
     private final int WHITE = Color.WHITE;
-    private final int MUTED = Color.rgb(165, 180, 200);
+    private final int GRAY = Color.rgb(170, 185, 205);
+    private final int GREEN = Color.rgb(0, 230, 150);
 
+    private LinearLayout root;
     private TextView status;
     private boolean enabled = false;
-    private boolean animationsEnabled = true;
     private boolean floatingEnabled = false;
 
     private WindowManager windowManager;
     private View floatingView;
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        windowManager =
+                (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        buildInterface();
+    }
+
     private GradientDrawable shape(int color, int stroke) {
         GradientDrawable d = new GradientDrawable();
         d.setColor(color);
-        d.setCornerRadius(24);
-        d.setStroke(2, stroke);
+        d.setCornerRadius(dp(18));
+        if (stroke != 0) {
+            d.setStroke(dp(2), stroke);
+        }
         return d;
     }
 
-    private TextView label(String value, int size, int color) {
+    private int dp(float value) {
+        return (int) (value * getResources()
+                .getDisplayMetrics().density + 0.5f);
+    }
+
+    private TextView label(String text, int size, int color) {
         TextView t = new TextView(this);
-        t.setText(value);
+        t.setText(text);
         t.setTextSize(size);
         t.setTextColor(color);
         t.setGravity(Gravity.CENTER);
         t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        t.setPadding(12, 12, 12, 12);
+        t.setPadding(dp(10), dp(10), dp(10), dp(10));
         return t;
     }
 
-    private Button makeButton(String value) {
+    private Button makeButton(String text) {
         Button b = new Button(this);
-        b.setText(value);
+        b.setText(text);
         b.setTextColor(WHITE);
-        b.setTextSize(16);
+        b.setTextSize(15);
         b.setAllCaps(false);
-        b.setGravity(Gravity.CENTER);
-        b.setMinHeight(64);
-        b.setMinimumHeight(64);
-        b.setPadding(12, 8, 12, 8);
         b.setBackground(shape(PANEL, BLUE));
-
-        if (Build.VERSION.SDK_INT >= 21) {
-            b.setStateListAnimator(null);
-        }
-
-        if (animationsEnabled) {
-            b.setOnTouchListener((v, event) -> {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    v.animate().scaleX(0.97f).scaleY(0.97f)
-                        .setDuration(80).start();
-                } else if (event.getAction() == MotionEvent.ACTION_UP
-                        || event.getAction() == MotionEvent.ACTION_CANCEL) {
-                    v.animate().scaleX(1f).scaleY(1f)
-                        .setDuration(100).start();
-                }
-                return false;
-            });
-        }
-
+        b.setPadding(dp(8), dp(6), dp(8), dp(6));
         return b;
-    }
-
-    private void addButton(LinearLayout parent, Button b) {
-        LinearLayout.LayoutParams p =
-            new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            );
-        p.setMargins(0, 8, 0, 8);
-        parent.addView(b, p);
-    }
-
-    private void updateStatus() {
-        if (status == null) return;
-
-        if (enabled) {
-            status.setText("● النظام يعمل");
-            status.setTextColor(BLUE);
-        } else {
-            status.setText("● النظام متوقف");
-            status.setTextColor(MUTED);
-        }
-    }
-
-    private void showMessage(String msg) {
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        windowManager = (WindowManager) getSystemService(
-            Context.WINDOW_SERVICE
-        );
-        buildInterface();
     }
 
     private void buildInterface() {
         ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
         scroll.setBackgroundColor(BG);
 
-        LinearLayout root = new LinearLayout(this);
+        root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(22, 28, 22, 24);
-        root.setBackgroundColor(BG);
-
+        root.setPadding(dp(18), dp(22), dp(18), dp(22));
         scroll.addView(root);
 
-        TextView title = label("ESP OVERLAY PRO", 28, BLUE);
-        root.addView(title, new LinearLayout.LayoutParams(-1, -2));
+        TextView title = label("ESP OVERLAY PRO", 27, BLUE);
+        root.addView(title, matchWrap());
 
         TextView subtitle = label(
-            "لوحة التحكم الليونية",
-            17,
-            WHITE
-        );
-        root.addView(subtitle, new LinearLayout.LayoutParams(-1, -2));
+                "واجهة تجريبية • أسود وأزرق نيوني", 14, GRAY);
+        root.addView(subtitle, matchWrap());
 
-        View line = new View(this);
-        line.setBackgroundColor(BLUE);
-        LinearLayout.LayoutParams lineParams =
-            new LinearLayout.LayoutParams(-1, 3);
-        lineParams.setMargins(0, 16, 0, 18);
-        root.addView(line, lineParams);
+        addSpace(12);
 
-        status = label("● النظام متوقف", 21, MUTED);
-        status.setBackground(shape(PANEL, BLUE));
-        root.addView(status, new LinearLayout.LayoutParams(-1, 64));
+        LinearLayout statusCard = new LinearLayout(this);
+        statusCard.setOrientation(LinearLayout.VERTICAL);
+        statusCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        statusCard.setBackground(shape(PANEL, BLUE));
 
-        Button on = makeButton("تشغيل النظام");
-        addButton(root, on);
+        status = label("● الحالة: متوقفة", 18, GRAY);
+        statusCard.addView(status, matchWrap());
+        root.addView(statusCard, matchWrap());
 
-        Button off = makeButton("إيقاف النظام");
-        addButton(root, off);
+        addSpace(16);
 
-        on.setOnClickListener(v -> {
+        Button start = makeButton("▶ تشغيل الواجهة");
+        root.addView(start, matchWrap());
+        start.setOnClickListener(v -> {
             enabled = true;
             updateStatus();
-            showMessage("تم تشغيل واجهة التطبيق");
+            showMessage("تم تشغيل الواجهة التجريبية");
         });
 
-        off.setOnClickListener(v -> {
+        addSpace(8);
+
+        Button stop = makeButton("■ إيقاف الواجهة");
+        root.addView(stop, matchWrap());
+        stop.setOnClickListener(v -> {
             enabled = false;
             updateStatus();
-            showMessage("تم إيقاف واجهة التطبيق");
+            showMessage("تم إيقاف الواجهة");
         });
 
-        TextView section = label("المؤشرات", 21, BLUE);
-        LinearLayout.LayoutParams sp =
-            new LinearLayout.LayoutParams(-1, 60);
-        sp.setMargins(0, 14, 0, 0);
-        root.addView(section, sp);
+        addSpace(8);
 
-        TextView indicator = label(
-            "حالة الواجهة: جاهزة\nالمؤثرات: متاحة\nنوع اللوحة: مستقلة",
-            15,
-            MUTED
-        );
-        indicator.setBackground(shape(PANEL, Color.rgb(45, 65, 90)));
-        root.addView(indicator, new LinearLayout.LayoutParams(-1, 100));
-
-        Button floating = makeButton("إظهار الزر العائم");
-        addButton(root, floating);
-        floating.setOnClickListener(v -> requestFloating());
-
-        Button settings = makeButton("الإعدادات");
-        addButton(root, settings);
+        Button settings = makeButton("⚙ الإعدادات");
+        root.addView(settings, matchWrap());
         settings.setOnClickListener(v -> showSettings());
 
-        Button close = makeButton("إغلاق الزر العائم");
-        addButton(root, close);
-        close.setOnClickListener(v -> removeFloating());
+        addSpace(8);
 
-        TextView footer = label(
-            "واجهة تجريبية مستقلة\nلا تتحكم باللعبة ولا تكشف مواقع اللاعبين",
-            13,
-            MUTED
-        );
-        LinearLayout.LayoutParams fp =
-            new LinearLayout.LayoutParams(-1, -2);
-        fp.setMargins(0, 18, 0, 0);
-        root.addView(footer, fp);
+        Button floating = makeButton("◉ إظهار الزر العائم");
+        root.addView(floating, matchWrap());
+        floating.setOnClickListener(v -> showFloating());
+
+        addSpace(8);
+
+        Button hide = makeButton("إخفاء الزر العائم");
+        root.addView(hide, matchWrap());
+        hide.setOnClickListener(v -> removeFloating());
+
+        addSpace(16);
+
+        TextView note = label(
+                "ملاحظة: التطبيق واجهة تجريبية فقط، " +
+                "ولا يكشف اللاعبين أو مواقعهم داخل PUBG.",
+                14, GRAY);
+        root.addView(note, matchWrap());
 
         setContentView(scroll);
     }
 
+    private LinearLayout.LayoutParams matchWrap() {
+        return new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+    }
+
+    private void addSpace(int height) {
+        View space = new View(this);
+        root.addView(space, new LinearLayout.LayoutParams(
+                1, dp(height)));
+    }
+
+    private void updateStatus() {
+        if (status != null) {
+            if (enabled) {
+                status.setText("● الحالة: تعمل");
+                status.setTextColor(GREEN);
+            } else {
+                status.setText("● الحالة: متوقفة");
+                status.setTextColor(GRAY);
+            }
+        }
+    }
+
     private void showSettings() {
         String[] options = {
-            "تفعيل المؤثرات",
-            "إيقاف المؤثرات",
-            "معلومات التطبيق"
+                "معلومات التطبيق",
+                "حالة الواجهة",
+                "إغلاق"
         };
 
         new AlertDialog.Builder(this)
-            .setTitle("إعدادات ESP OVERLAY PRO")
-            .setItems(options, (dialog, which) -> {
-                if (which == 0) {
-                    animationsEnabled = true;
-                    showMessage("تم تفعيل المؤثرات");
-                    buildInterface();
-                } else if (which == 1) {
-                    animationsEnabled = false;
-                    showMessage("تم إيقاف المؤثرات");
-                    buildInterface();
-                } else {
-                    new AlertDialog.Builder(this)
-                        .setTitle("معلومات التطبيق")
-                        .setMessage(
-                            "ESP OVERLAY PRO\n" +
-                            "واجهة مستقلة تجريبية\n" +
-                            "أزرار التشغيل تتحكم بالواجهة فقط."
-                        )
-                        .setPositiveButton("حسناً", null)
-                        .show();
-                }
-            })
-            .setNegativeButton("إلغاء", null)
-            .show();
-    }
-
-    private void requestFloating() {
-        if (Build.VERSION.SDK_INT >= 23
-                && !Settings.canDrawOverlays(this)) {
-            Intent intent = new Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:" + getPackageName())
-            );
-            startActivity(intent);
-            showMessage("فعّل إذن الظهور فوق التطبيقات ثم ارجع");
-            return;
-        }
-
-        showFloating();
+                .setTitle("⚙ الإعدادات")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        new AlertDialog.Builder(this)
+                                .setTitle("ESP OVERLAY PRO")
+                                .setMessage(
+                                        "نسخة تجريبية للأندرويد.\n" +
+                                        "ألوان: أسود وأزرق نيوني.\n" +
+                                        "لا تتصل باللعبة ولا تكشف اللاعبين.")
+                                .setPositiveButton("حسناً", null)
+                                .show();
+                    } else if (which == 1) {
+                        showMessage(enabled
+                                ? "الواجهة تعمل"
+                                : "الواجهة متوقفة");
+                    }
+                })
+                .show();
     }
 
     private void showFloating() {
-        if (floatingView != null) {
+        if (floatingEnabled && floatingView != null) {
             showMessage("الزر العائم ظاهر بالفعل");
             return;
         }
 
-        TextView bubble = label("ESP", 16, WHITE);
+        if (Build.VERSION.SDK_INT >= 23
+                && !Settings.canDrawOverlays(this)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("السماح بالزر العائم")
+                    .setMessage(
+                            "فعّل السماح بالظهور فوق التطبيقات " +
+                            "حتى يظهر الزر العائم.")
+                    .setPositiveButton("فتح الإعدادات", (d, w) -> {
+                        Intent intent = new Intent(
+                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                    })
+                    .setNegativeButton("إلغاء", null)
+                    .show();
+            return;
+        }
+
+        final TextView bubble = label("ESP", 16, WHITE);
         bubble.setBackground(shape(PANEL, BLUE));
-        bubble.setElevation(12);
+        bubble.setElevation(dp(12));
 
         int type;
         if (Build.VERSION.SDK_INT >= 26) {
@@ -282,18 +247,17 @@ public class MainActivity extends Activity {
             type = WindowManager.LayoutParams.TYPE_PHONE;
         }
 
-        WindowManager.LayoutParams params =
-            new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                type,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                PixelFormat.TRANSLUCENT
-            );
+        final WindowManager.LayoutParams params =
+                new WindowManager.LayoutParams(
+                        WindowManager.LayoutParams.WRAP_CONTENT,
+                        WindowManager.LayoutParams.WRAP_CONTENT,
+                        type,
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                        PixelFormat.TRANSLUCENT);
 
         params.gravity = Gravity.TOP | Gravity.START;
-        params.x = 30;
-        params.y = 250;
+        params.x = dp(30);
+        params.y = dp(250);
 
         bubble.setOnTouchListener(new View.OnTouchListener() {
             private int startX, startY;
@@ -310,33 +274,39 @@ public class MainActivity extends Activity {
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
-                        params.x = startX + (int)(event.getRawX() - touchX);
-                        params.y = startY + (int)(event.getRawY() - touchY);
-                        windowManager.updateViewLayout(bubble, params);
+                        params.x = startX +
+                                (int) (event.getRawX() - touchX);
+                        params.y = startY +
+                                (int) (event.getRawY() - touchY);
+                        try {
+                            windowManager.updateViewLayout(bubble, params);
+                        } catch (Exception ignored) {
+                        }
                         return true;
 
                     case MotionEvent.ACTION_UP:
-                        float dx = Math.abs(event.getRawX() - touchX);
-                        float dy = Math.abs(event.getRawY() - touchY);
+                        float dx = Math.abs(
+                                event.getRawX() - touchX);
+                        float dy = Math.abs(
+                                event.getRawY() - touchY);
 
-                        if (dx < 10 && dy < 10) {
+                        if (dx < dp(10) && dy < dp(10)) {
                             new AlertDialog.Builder(MainActivity.this)
-                                .setTitle("ESP OVERLAY PRO")
-                                .setMessage(
-                                    enabled
-                                    ? "حالة الواجهة: تعمل"
-                                    : "حالة الواجهة: متوقفة"
-                                )
-                                .setPositiveButton("تشغيل", (d, w) -> {
-                                    enabled = true;
-                                    updateStatus();
-                                })
-                                .setNegativeButton("إيقاف", (d, w) -> {
-                                    enabled = false;
-                                    updateStatus();
-                                })
-                                .setNeutralButton("إغلاق", (d, w) -> removeFloating())
-                                .show();
+                                    .setTitle("ESP OVERLAY PRO")
+                                    .setMessage(enabled
+                                            ? "حالة الواجهة: تعمل"
+                                            : "حالة الواجهة: متوقفة")
+                                    .setPositiveButton("تشغيل", (d, w) -> {
+                                        enabled = true;
+                                        updateStatus();
+                                    })
+                                    .setNegativeButton("إيقاف", (d, w) -> {
+                                        enabled = false;
+                                        updateStatus();
+                                    })
+                                    .setNeutralButton("إغلاق الزر",
+                                            (d, w) -> removeFloating())
+                                    .show();
                         }
                         return true;
                 }
@@ -351,14 +321,37 @@ public class MainActivity extends Activity {
             showMessage("تم إظهار الزر العائم");
         } catch (Exception e) {
             floatingView = null;
-            showMessage("تعذر إظهار الزر العائم");
-}
-}
+            floatingEnabled = false;
+            showMessage("تعذر إظهار الزر. تحقق من الإذن.");
+        }
+    }
 
-@Override
-protected void onDestroy() {
-    removeFloating();
-    super.onDestroy();
-}
+    private void removeFloating() {
+        if (floatingView != null) {
+            try {
+                windowManager.removeView(floatingView);
+            } catch (Exception ignored) {
+            }
+            floatingView = null;
+        }
+        floatingEnabled = false;
+        showMessage("تم إخفاء الزر العائم");
+    }
 
+    private void showMessage(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (floatingView != null) {
+            try {
+                windowManager.removeView(floatingView);
+            } catch (Exception ignored) {
+            }
+            floatingView = null;
+        }
+        floatingEnabled = false;
+        super.onDestroy();
+    }
 }
